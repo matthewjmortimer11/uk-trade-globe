@@ -4,10 +4,13 @@ Every pound of UK goods trade, by country and by month, on one screen.
 
 ![The exports view](docs/exports.png)
 
-Live data from the [ONS "Trade in goods: country by commodity" API][api]: **239 markets ×
-96 months × 123 commodity classes**, in £ millions. Drag the globe, scrub eight years of
-history, or press play and watch the flows redistribute through Brexit and Covid in about
-ten seconds.
+Live data from the [ONS "Trade in goods: country by commodity" API][api]: **236 countries and
+territories × 96 months × 123 commodity classes**, in £ millions. Drag the globe, scrub eight
+years of history, or press play and watch the flows redistribute through Brexit and Covid in
+about ten seconds.
+
+(217 of those territories have recorded trade at some point in the window and are kept in the
+bundle; a typical single month has trade with about 180.)
 
 The layer that makes it more than a map: each market carries its **indirect-tax regime** —
 whether one EU OSS registration covers it, whether you need a standalone VAT registration,
