@@ -1,0 +1,22 @@
+{
+  "name": "uk-trade-globe",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Where Britain Sells — UK trade in goods on an interactive globe, from the ONS API.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "fetch": "node scripts/fetch-ons.mjs",
+    "check": "node scripts/reconcile.mjs"
+  },
+  "dependencies": {
+    "d3-geo": "^3.1.1",
+    "topojson-client": "^3.1.0",
+    "world-atlas": "^2.0.2"
+  },
+  "devDependencies": {
+    "vite": "^6.0.7"
+  }
+}
