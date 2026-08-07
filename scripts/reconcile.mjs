@@ -46,9 +46,9 @@ console.log('Reconciliation vs ONS "W1 — Whole world"');
   if (worst.gap > 0.02) {
     fail(`worst cell is ${pct}% off — ${worst.direction} ${worst.time}: summed ${worst.sum}, ONS W1 ${worst.world}`);
   } else if (worst.gap === 0) {
-    pass(`${checked} country/month cells reconcile exactly against ONS's own world total`);
+    pass(`${checked} month × direction totals reconcile exactly against ONS's own world row`);
   } else {
-    pass(`${checked} country/month cells reconcile; worst gap ${pct}% (${worst.direction} ${worst.time}: ${worst.sum} vs ${worst.world})`);
+    pass(`${checked} month × direction totals reconcile; worst gap ${pct}% (${worst.direction} ${worst.time}: ${worst.sum} vs ${worst.world})`);
   }
 }
 

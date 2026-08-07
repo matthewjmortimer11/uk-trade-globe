@@ -41,7 +41,8 @@ npm run check
 
 This is the part I care most about. The ONS publishes a `W1 — Whole world` row alongside the
 per-country rows, which makes the dataset self-checking: sum the countries, compare to ONS's
-own total. It reconciles **exactly across all 192 country/month cells**, in both directions.
+own total. Across every month and both directions — **192 totals** — it reconciles exactly,
+not approximately.
 
 The suite also asserts that the 10 SITC sections sum to the all-commodity total, that the
 96-month series has no gaps or ordering faults, that no aggregate row (`W1`/`B5`/`D5`) has
@@ -51,7 +52,7 @@ Greenland with the United States' trade and nothing else would complain.
 
 ```
 Reconciliation vs ONS "W1 — Whole world"
-  ✓ 192 country/month cells reconcile exactly against ONS's own world total
+  ✓ 192 month × direction totals reconcile exactly against ONS's own world row
 Country code coverage
   ✓ all 217 trading partners either map to a polygon or are declared polygon-less
 Country join
