@@ -93,9 +93,10 @@ the step count from elapsed wall-clock time keeps the run the same length either
 - **Goods only.** The ONS publishes services trade separately and on a different geography
   basis. For the UK — a services-led economy — that is a real gap, and it is the first thing
   I would add.
-- **The tax layer is indicative.** It covers 66 markets and is dated. Rates move; several moved
-  during 2025. It is signposted as needing verification against the tax authority, and it is
-  not tax advice.
+- **The tax layer is indicative.** It covers 67 markets — 97% of UK two-way goods trade in the
+  latest month, but only 28% of the territories on the globe — and it is dated. Rates move:
+  four of the 27 EU standard rates changed between September 2024 and August 2025. It is
+  signposted as needing verification against the tax authority, and it is not tax advice.
 - **Non seasonally adjusted.** Month-on-month moves carry seasonality, which is why the headline
   compares year on year.
 

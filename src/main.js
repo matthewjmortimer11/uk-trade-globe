@@ -130,6 +130,16 @@ const phaseFor = (() => {
 
 const ARC_LIMIT = 45;
 
+// How much of UK trade the tax layer actually accounts for. Computed rather than asserted,
+// so it stays honest when markets are added to (or dropped from) `markets.js`.
+const TAX_COVERAGE = (() => {
+  const both = [bundle.series.EX[latest], bundle.series.IM[latest]];
+  const total = both.reduce((a, row) => a + Object.values(row).reduce((x, y) => x + y, 0), 0);
+  const covered = Object.keys(MARKETS)
+    .reduce((a, c) => a + (both[0][c] ?? 0) + (both[1][c] ?? 0), 0);
+  return (covered / total * 100).toFixed(1);
+})();
+
 function pushToGlobe(entries) {
   const values = new Map();
   let max = 0;
@@ -334,8 +344,9 @@ function renderDetail(tIndex) {
         );
       })()
     : '<div class="tax"><p class="eyebrow">Selling into this market</p>' +
-      `<p class="note">No indirect-tax profile recorded for ${countryName(iso2)}. The profile covers the ` +
-      `${Object.keys(MARKETS).length} markets that carry the great majority of UK goods trade.</p></div>`;
+      `<p class="note">No indirect-tax profile recorded for ${countryName(iso2)}. The profile covers ` +
+      `${Object.keys(MARKETS).length} markets — ${TAX_COVERAGE}% of UK two-way goods trade in ` +
+      `${longMonth(latest)}.</p></div>`;
 
   el.detail.innerHTML =
     `<div><p class="eyebrow">${longMonth(t)}</p><h2>${countryName(iso2)}</h2></div>` +
