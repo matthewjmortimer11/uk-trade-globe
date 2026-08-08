@@ -163,5 +163,145 @@ console.log('\nCountry join');
   else pass('every top-20 export market is either drawable or explicitly declared polygon-less');
 }
 
+// ——— 7. The country rows partition into ONS's own EU / non-EU subtotals ——————
+// Stronger than the world-total check. That one only proves the rows add up; this proves
+// each row is on the correct side of a boundary ONS drew separately. One country assigned
+// to the wrong bloc, or dropped, breaks it while leaving the world total intact.
+console.log('\nEU / non-EU partition');
+{
+  // ONS labels the row "EU(28)", but for these periods it is the 27 member states —
+  // the UK is the reporting country, not a partner.
+  const EU27 = ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU',
+    'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE'];
+
+  let checked = 0;
+  let mismatches = 0;
+  let worstEu = 0;
+
+  for (const direction of ['EX', 'IM']) {
+    for (const time of bundle.meta.times) {
+      const row = bundle.series[direction][time];
+      const bloc = bundle.blocs?.[direction]?.[time];
+      if (!bloc) { fail(`no EU/non-EU subtotals for ${direction} ${time}`); continue; }
+
+      const eu = EU27.reduce((a, c) => a + (row[c] ?? 0), 0);
+      const nonEu = Object.entries(row).reduce((a, [c, v]) => a + (EU27.includes(c) ? 0 : v), 0);
+      checked += 1;
+
+      if (eu !== bloc.B5 || nonEu !== bloc.D5) {
+        mismatches += 1;
+        worstEu = Math.max(worstEu, Math.abs(eu - bloc.B5));
+        if (mismatches <= 3) {
+          fail(`${direction} ${time}: EU rows sum to ${eu} vs ONS B5 ${bloc.B5}; non-EU ${nonEu} vs D5 ${bloc.D5}`);
+        }
+      }
+      if (bloc.B5 + bloc.D5 !== bundle.world[direction][time]) {
+        fail(`${direction} ${time}: B5 + D5 (${bloc.B5 + bloc.D5}) ≠ W1 (${bundle.world[direction][time]})`);
+      }
+    }
+  }
+
+  if (!mismatches) pass(`${checked} cells: the 27 EU rows sum exactly to ONS's EU subtotal, the rest to its non-EU subtotal`);
+  else fail(`${mismatches} of ${checked} cells mis-partition (worst EU gap ${worstEu})`);
+}
+
+// ——— 8. Direction is not transposed ————————————————————————————————————
+// A swapped EX/IM mapping would leave every total, partition and reconciliation intact
+// while inverting the entire dashboard. These are trade relationships whose direction is
+// a matter of public record, so they pin the mapping to reality.
+console.log('\nDirection');
+{
+  const latest = bundle.meta.latest;
+  const bal = (c) => (bundle.series.EX[latest][c] ?? 0) - (bundle.series.IM[latest][c] ?? 0);
+
+  // The UK buys Norwegian gas and sells Norway comparatively little.
+  if (bal('NO') >= 0) fail(`a surplus with Norway (${bal('NO')}) — the UK is a large net importer of Norwegian energy; EX/IM look transposed`);
+  else pass(`net importer from Norway (${bal('NO')} £m), as expected for energy`);
+
+  // The UK runs a persistent goods surplus with Ireland.
+  if (bal('IE') <= 0) warn(`a deficit with Ireland (${bal('IE')}) — the UK normally runs a goods surplus there; worth checking`);
+  else pass(`net exporter to Ireland (+${bal('IE')} £m), as expected`);
+
+  // And a large deficit with China.
+  if (bal('CN') >= 0) fail(`a surplus with China (${bal('CN')}) — EX/IM look transposed`);
+  else pass(`net importer from China (${bal('CN')} £m), as expected`);
+}
+
+// ——— 9. Magnitude sanity ————————————————————————————————————————————————
+// Catches a unit error — thousands read as millions, or vice versa — which no internal
+// consistency check can see, because everything would still reconcile.
+console.log('\nMagnitude');
+{
+  const last12 = bundle.meta.times.slice(-12);
+  const annual = last12.reduce((a, t) => a + bundle.world.EX[t], 0) / 1000;
+  if (annual < 250 || annual > 550) {
+    fail(`annual goods exports of £${annual.toFixed(0)}bn is outside the plausible £250–550bn band — check the unit`);
+  } else {
+    pass(`last 12 months of goods exports total £${annual.toFixed(0)}bn, consistent with a £ million unit`);
+  }
+}
+
+// ——— 10. The cache still matches the live API ————————————————————————————
+// Everything above is computed from a bundle built out of .cache/. This is the only check
+// that reaches the network, so it is the only one that can catch the bundle having drifted
+// from what ONS actually publishes. Opt-in: `npm run check -- --live`.
+if (process.argv.includes('--live')) {
+  console.log('\nLive API (re-fetching, bypassing cache)');
+  const version = bundle.meta.version;
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const samples = Array.from({ length: 4 }, () => ({
+    time: pick(bundle.meta.times),
+    direction: pick(['EX', 'IM']),
+  }));
+
+  // Always include the latest month; it is the one on screen when the page opens.
+  samples.push({ time: bundle.meta.latest, direction: 'EX' });
+
+  for (const { time, direction } of samples) {
+    const url = `https://api.beta.ons.gov.uk/v1/datasets/trade/editions/time-series/versions/${version}` +
+      `/observations?time=${encodeURIComponent(time)}&geography=K02000001&countriesandterritories=*` +
+      `&direction=${direction}&standardindustrialtradeclassification=T`;
+    try {
+      // The ONS endpoint intermittently takes longer than a minute to answer. One retry
+      // keeps a slow response from reading as a data mismatch.
+      let json;
+      for (let attempt = 0; ; attempt += 1) {
+        try {
+          const res = await fetch(url, { signal: AbortSignal.timeout(90_000) });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          json = await res.json();
+          break;
+        } catch (err) {
+          if (attempt >= 1) throw err;
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+      }
+
+      let live = 0;
+      let liveWorld = null;
+      for (const obs of json.observations ?? []) {
+        const code = obs.dimensions.CountriesAndTerritories.id;
+        const value = Number(obs.observation);
+        if (!Number.isFinite(value)) continue;
+        if (code === 'W1') { liveWorld = value; continue; }
+        if (code === 'B5' || code === 'D5') continue;
+        live += value;
+      }
+
+      const baked = Object.values(bundle.series[direction][time]).reduce((a, b) => a + b, 0);
+      if (live !== baked || liveWorld !== bundle.world[direction][time]) {
+        fail(`${direction} ${time}: live API says ${live} (W1 ${liveWorld}), bundle says ${baked} (W1 ${bundle.world[direction][time]})`);
+      } else {
+        pass(`${direction} ${time}: live API matches the bundle exactly (${baked} £m)`);
+      }
+    } catch (err) {
+      warn(`${direction} ${time}: could not reach the ONS API (${err.message})`);
+    }
+  }
+} else {
+  console.log('\nLive API');
+  console.log('  · skipped — run `npm run check -- --live` to re-fetch sample cells and compare');
+}
+
 console.log(`\n${failures ? `FAILED — ${failures} error(s)` : 'All checks passed'}${warnings ? `, ${warnings} warning(s)` : ''}\n`);
 process.exit(failures ? 1 : 0);

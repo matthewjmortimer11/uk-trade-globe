@@ -476,13 +476,14 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Fade the interaction hint once the user has clearly got the idea.
-let hinted = false;
-$('#globe').addEventListener('pointerdown', () => {
-  if (hinted) return;
-  hinted = true;
-  el.hint.classList.add('hide');
-}, { once: true });
+// The hint has to name the gestures that actually exist on this device — "scroll to zoom ·
+// click a country" is wrong on a phone, and the two-finger requirement is not guessable.
+if (window.matchMedia?.('(pointer: coarse)').matches) {
+  el.hint.textContent = 'Two fingers to rotate and zoom · tap a country';
+}
+
+// Fade it once the user has clearly got the idea.
+$('#globe').addEventListener('pointerdown', () => el.hint.classList.add('hide'), { once: true });
 
 // ——— boot ————————————————————————————————————————————————————————————————
 

@@ -152,6 +152,10 @@ async function main() {
   //    239 × 96 × 2 grid is zero, and omitting them roughly halves the payload.
   const series = { EX: {}, IM: {} };
   const world = { EX: {}, IM: {} };
+  // ONS's own EU and non-EU subtotals. Kept rather than discarded because they let the
+  // check suite validate the country rows as a partition: every country has to land on
+  // the correct side of a boundary ONS computed independently of the per-country figures.
+  const blocs = { EX: {}, IM: {} };
   const seen = new Set();
 
   for (const { direction, time, data } of totals) {
@@ -161,7 +165,10 @@ async function main() {
       const value = toNumber(obs.observation);
       if (value === null) continue;
       if (code === 'W1') { world[direction][time] = value; continue; }
-      if (code === 'B5' || code === 'D5') continue; // EU / non-EU aggregates
+      if (code === 'B5' || code === 'D5') {
+        (blocs[direction][time] ??= {})[code] = value;
+        continue;
+      }
       if (value === 0) continue;
       row[code] = value;
       seen.add(code);
@@ -207,6 +214,7 @@ async function main() {
     countries,
     series,
     world,
+    blocs,
     commodity,
   };
 

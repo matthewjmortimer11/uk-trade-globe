@@ -46,19 +46,45 @@ per-country rows, which makes the dataset self-checking: sum the countries, comp
 own total. Across every month and both directions — **192 totals** — it reconciles exactly,
 not approximately.
 
-The suite also asserts that the 10 SITC sections sum to the all-commodity total, that the
-96-month series has no gaps or ordering faults, that no aggregate row (`W1`/`B5`/`D5`) has
-leaked into the country series, and — the check that guards the ugliest silent failure — that
-the ISO alpha-2 → numeric join lands on the right polygons. An off-by-one there would shade
-Greenland with the United States' trade and nothing else would complain.
+Stronger still is the **partition check**. ONS publishes EU and non-EU subtotals alongside
+the per-country rows, computed separately from them. Summing the 27 member-state rows hits
+ONS's EU subtotal exactly, and everything else hits its non-EU subtotal — in all 192 cells.
+The world-total check only proves the rows add up; this proves each row is on the correct
+side of a boundary drawn independently. A single country assigned to the wrong bloc, or
+dropped, breaks it while leaving the world total intact.
+
+Three more classes of error that internal consistency cannot see:
+
+- **A transposed direction** would leave every total, partition and reconciliation valid
+  while inverting the whole dashboard. So the suite pins the mapping to public record: the
+  UK must be a net importer from Norway (energy) and China, and a net exporter to Ireland.
+- **A unit error** — thousands read as millions — would also reconcile perfectly. The last
+  twelve months of goods exports must land in a plausible £250–550bn band. They total £380bn.
+- **Cache drift.** Everything above is computed from a bundle built out of `.cache/`.
+  `npm run check:live` re-fetches sample cells straight from the API and compares them to
+  the bundle. It is the only check that touches the network, and the only one that can catch
+  the committed data having diverged from what ONS actually publishes.
+
+It also asserts that the 10 SITC sections sum to the all-commodity total, that the 96-month
+series has no gaps or ordering faults, that no aggregate row has leaked into the country
+series, and — the check guarding the ugliest silent failure — that the ISO alpha-2 → numeric
+join lands on the right polygons. An off-by-one there would shade Greenland with the United
+States' trade and nothing else would complain.
 
 ```
 Reconciliation vs ONS "W1 — Whole world"
   ✓ 192 month × direction totals reconcile exactly against ONS's own world row
-Country code coverage
-  ✓ all 217 trading partners either map to a polygon or are declared polygon-less
+EU / non-EU partition
+  ✓ 192 cells: the 27 EU rows sum exactly to ONS's EU subtotal, the rest to its non-EU subtotal
+Direction
+  ✓ net importer from Norway (-1770 £m), as expected for energy
+  ✓ net exporter to Ireland (+633 £m), as expected
+Magnitude
+  ✓ last 12 months of goods exports total £380bn, consistent with a £ million unit
 Country join
   ✓ all 20 spot-checked ISO codes resolve to the right polygon
+Live API (re-fetching, bypassing cache)
+  ✓ EX Dec-25: live API matches the bundle exactly (30101 £m)
 ```
 
 ## How it fits together
@@ -100,6 +126,25 @@ What replaced them:
   scrubber runs.
 - **A surveyor's crosshair** marks the UK rather than a pulsing dot. It's a fixed reference
   point and should look like one.
+
+### On a phone
+
+Touch is treated as its own input, keyed to `pointer: coarse` rather than to viewport width —
+so a narrow window on a laptop keeps mouse-sized controls and a large tablet gets finger-sized
+ones.
+
+The gesture model matters most. The page scrolls and the globe is only part of it, so **one
+finger belongs to the page and two fingers drive the globe** — the convention embedded maps
+use. Previously the canvas took `touch-action: none`, which meant a finger landing anywhere on
+a 370px-tall globe trapped the scroll on a 1,400px page. Two fingers now rotate and pinch as
+one continuous gesture, a single tap still selects a country, and `pointercancel` is handled so
+the browser claiming a scroll doesn't leave a stale drag behind.
+
+Everything a finger has to hit clears 44px — that meant 66 targets, including a 2px scrubber
+marker that was decorative on a desktop and unusable on a phone. The 10 and 11px captions step
+up a size. The headline figure is its own grid item so the stacked layout can place it above
+the globe, where it reads before you scroll. And the hint names the gestures that exist on the
+device you're holding, rather than telling a phone to scroll and click.
 
 ### Two decisions worth explaining
 

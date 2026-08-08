@@ -102,6 +102,11 @@ export class Globe {
       typeof window !== 'undefined' &&
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
+    // On touch the page scrolls and the globe is only part of it, so a single finger must
+    // belong to the page — otherwise a finger landing anywhere on the globe traps the
+    // scroll. Two fingers rotate and pinch, the same convention embedded maps use.
+    this.coarse = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
+
     this.proj = geoOrthographic().clipAngle(90).precision(0.5);
     this._setup();
   }
@@ -151,20 +156,26 @@ export class Globe {
       return [e.clientX - r.left, e.clientY - r.top];
     };
 
+    // Whether this pointer should drive the camera at all. A lone finger never does.
+    const oneFingerDrags = (e) => !(this.coarse && e.pointerType === 'touch');
+
     this._onDown = (e) => {
       const pt = local(e);
       this.pointers.set(e.pointerId, pt);
       if (this.pointers.size === 1) {
-        cv.setPointerCapture(e.pointerId);
         this.camAnim = null;
         this.pinch = null;
-        this.drag = { x: pt[0], y: pt[1], moved: 0, t: Date.now() };
         this.vel = [0, 0];
-        cv.style.cursor = 'grabbing';
+        // Still record the press, so a tap can resolve to a country even on touch.
+        this.drag = { x: pt[0], y: pt[1], moved: 0, t: Date.now(), rotates: oneFingerDrags(e) };
+        if (this.drag.rotates) {
+          cv.setPointerCapture(e.pointerId);
+          cv.style.cursor = 'grabbing';
+        }
       } else if (this.pointers.size === 2) {
         this.drag = null;
-        this.pinch = { dist: this._pinchDist(), zoom: this.zoom };
         this.vel = [0, 0];
+        this.pinch = { dist: this._pinchDist(), zoom: this.zoom, mid: this._pinchMid() };
       }
       this.lastInteract = Date.now();
     };
@@ -177,6 +188,24 @@ export class Globe {
       if (this.pinch && this.pointers.size >= 2) {
         const dist = this._pinchDist();
         if (dist > 0 && this.pinch.dist > 0) this.setZoom(this.pinch.zoom * (dist / this.pinch.dist));
+        // Two-finger drag rotates: the midpoint between the fingers steers the camera, so
+        // pinching and turning the globe are one continuous gesture rather than two modes.
+        const mid = this._pinchMid();
+        if (mid && this.pinch.mid) {
+          const k = 70 / this.proj.scale();
+          this.rot[0] += (mid[0] - this.pinch.mid[0]) * k;
+          this.rot[1] = Math.max(-89, Math.min(89, this.rot[1] - (mid[1] - this.pinch.mid[1]) * k));
+          this.pinch.mid = mid;
+          this.dirty = true;
+        }
+        return;
+      }
+      if (this.drag && !this.drag.rotates) {
+        // A lone finger: track how far it has moved so we can tell a tap from a scroll,
+        // but leave the camera alone and let the page scroll underneath.
+        this.drag.moved += Math.abs(pt[0] - this.drag.x) + Math.abs(pt[1] - this.drag.y);
+        this.drag.x = pt[0];
+        this.drag.y = pt[1];
         return;
       }
       if (this.drag) {
@@ -190,7 +219,8 @@ export class Globe {
         this.rot[1] = Math.max(-89, Math.min(89, this.rot[1] - dy * k));
         this.vel = [dx * k, -dy * k];
         this.dirty = true;
-      } else {
+      } else if (!this.coarse) {
+        // No hover state on touch — there is no pointer resting anywhere to justify one.
         this.pendingHover = pt;
       }
     };
@@ -227,9 +257,19 @@ export class Globe {
       this.lastInteract = Date.now();
     };
 
+    // The browser fires pointercancel when it claims the gesture for scrolling. Without
+    // this the globe keeps a stale drag and the next tap is swallowed.
+    this._onCancel = () => {
+      this.drag = null;
+      this.pinch = null;
+      this.pointers.clear();
+      this.vel = [0, 0];
+    };
+
     cv.addEventListener('pointerdown', this._onDown);
     cv.addEventListener('pointermove', this._onMove);
     cv.addEventListener('pointerup', this._onUp);
+    cv.addEventListener('pointercancel', this._onCancel);
     cv.addEventListener('pointerleave', this._onLeave);
     cv.addEventListener('wheel', this._onWheel, { passive: false });
   }
@@ -246,6 +286,7 @@ export class Globe {
     cv.removeEventListener('pointerdown', this._onDown);
     cv.removeEventListener('pointermove', this._onMove);
     cv.removeEventListener('pointerup', this._onUp);
+    cv.removeEventListener('pointercancel', this._onCancel);
     cv.removeEventListener('pointerleave', this._onLeave);
     cv.removeEventListener('wheel', this._onWheel);
   }
@@ -255,6 +296,11 @@ export class Globe {
   _pinchDist() {
     const [a, b] = [...this.pointers.values()];
     return a && b ? Math.hypot(a[0] - b[0], a[1] - b[1]) : 0;
+  }
+
+  _pinchMid() {
+    const [a, b] = [...this.pointers.values()];
+    return a && b ? [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] : null;
   }
 
   setZoom(z) {

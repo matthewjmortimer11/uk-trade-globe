@@ -66,6 +66,9 @@ button, select, input { font: inherit; color: inherit; }
 
 /* ——— layout ————————————————————————————————————————————————————————— */
 
+/* The headline figure is its own grid item rather than living inside the rail, so the
+   stacked layout can put it above the globe — on a phone the number is the first thing
+   worth seeing, and inside the rail it fell below the fold. */
 .shell {
   display: grid;
   height: 100dvh;
@@ -73,14 +76,16 @@ button, select, input { font: inherit; color: inherit; }
   column-gap: var(--s-6);
   row-gap: var(--s-4);
   grid-template-columns: 300px minmax(0, 1fr) 272px;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   grid-template-areas:
     "bar    bar    bar"
+    "hero   stage  detail"
     "rail   stage  detail"
     "scrub  scrub  scrub";
 }
 
 .bar    { grid-area: bar; }
+.hero   { grid-area: hero; }
 .rail   { grid-area: rail; }
 .stage  { grid-area: stage; }
 .detail { grid-area: detail; }
@@ -171,7 +176,7 @@ button, select, input { font: inherit; color: inherit; }
 
 .rail { display: flex; flex-direction: column; min-height: 0; }
 
-.hero { padding-bottom: var(--s-5); }
+.hero { padding-bottom: var(--s-5); min-width: 0; }
 
 .hero-label {
   margin: 0;
@@ -457,10 +462,11 @@ button, select, input { font: inherit; color: inherit; }
     grid-template-columns: 268px minmax(0, 1fr);
     grid-template-areas:
       "bar   bar"
+      "hero  stage"
       "rail  stage"
       "rail  detail"
       "scrub scrub";
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
   }
   .detail { max-height: 208px; }
   .scrub-note { display: none; }
@@ -472,9 +478,11 @@ button, select, input { font: inherit; color: inherit; }
     height: auto;
     padding: var(--s-4);
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "bar" "stage" "rail" "detail" "scrub";
-    grid-template-rows: auto 56vh auto auto auto;
+    /* Title, then the number, then the globe. The headline reads before you scroll. */
+    grid-template-areas: "bar" "hero" "stage" "rail" "detail" "scrub";
+    grid-template-rows: auto auto 52vh auto auto auto;
   }
+  .hero { padding-bottom: 0; }
   .bar { align-items: stretch; flex-direction: column; gap: var(--s-4); }
   /* The tabs and the commodity picker don't fit on one line at this width; give each
      its own row rather than letting the select push the layout wide. */
@@ -487,6 +495,52 @@ button, select, input { font: inherit; color: inherit; }
   .detail { max-height: none; }
   .source { display: none; }
   .scrub { flex-wrap: wrap; }
+}
+
+/* ——— touch ————————————————————————————————————————————————————————————
+ * Keyed to the input device rather than the viewport: a small window on a laptop still
+ * gets mouse-sized controls, and a large tablet still gets finger-sized ones.
+ */
+@media (pointer: coarse) {
+  /* Everything a finger has to hit gets to 44px. Where growing the box would wreck the
+     layout, the target is extended past the ink with padding instead. */
+  .seg { gap: var(--s-5); }
+  .seg button { padding: 11px 0 10px; }
+
+  .field select { padding-top: 11px; padding-bottom: 11px; }
+
+  .rank { padding-top: 12px; padding-bottom: 10px; }
+
+  .play { width: 44px; height: 44px; font-size: 11px; }
+
+  /* A 2px marker is unhittable. The bar stays visually thin; the grab area is the whole
+     44px row, and the thumb itself widens just enough to catch a fingertip. */
+  #time { height: 44px; }
+  #time::-webkit-slider-thumb { width: 4px; height: 20px; margin-top: -9.5px; }
+  #time::-moz-range-thumb { width: 4px; height: 20px; }
+
+  /* The globe sits inside a page that scrolls, so one finger belongs to the page.
+     Globe.js rotates on two fingers instead. */
+  #globe { touch-action: pan-y; cursor: default; }
+
+  /* 10px captions are legible on a desktop at arm's length and not on a phone. */
+  :root {
+    --t-10: 11px;
+    --t-11: 12px;
+    --t-12: 13px;
+    --t-13: 14px;
+  }
+}
+
+/* Notches and home indicators. */
+@supports (padding: max(0px)) {
+  @media (max-width: 860px) {
+    .shell {
+      padding-left: max(var(--s-4), env(safe-area-inset-left));
+      padding-right: max(var(--s-4), env(safe-area-inset-right));
+      padding-bottom: max(var(--s-4), env(safe-area-inset-bottom));
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
