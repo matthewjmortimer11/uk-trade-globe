@@ -195,9 +195,12 @@ function render() {
   const sectionLabel = state.commodity === 'T'
     ? 'goods'
     : bundle.sections.find((s) => s.code === state.commodity)?.label.toLowerCase() ?? 'goods';
-  el.heroLabel.textContent = state.direction === 'BAL'
-    ? `${sectionLabel} trade balance`
-    : `Total ${sectionLabel} ${dirWord}`;
+  // Commodity labels arrive lower-cased so they read naturally mid-sentence ("total
+  // chemicals exports"); the label itself still needs a capital.
+  const sentence = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  el.heroLabel.textContent = sentence(
+    state.direction === 'BAL' ? `${sectionLabel} trade balance` : `Total ${sectionLabel} ${dirWord}`,
+  );
 
   const headline = headlineFor(tIndex);
   el.heroValue.textContent = money(headline);
@@ -210,7 +213,9 @@ function render() {
     if (pct == null || !Number.isFinite(pct)) {
       el.heroYoy.textContent = '';
     } else {
-      el.heroYoy.textContent = `${pct >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}% YoY`;
+      // "on a year earlier" rather than "YoY" — this reads as a published figure, and the
+      // abbreviation was only ever saving four characters.
+      el.heroYoy.textContent = `${pct >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}% on a year earlier`;
       el.heroYoy.className = `delta ${pct >= 0 ? 'up' : 'down'}`;
     }
   } else {
@@ -235,12 +240,14 @@ function render() {
     if (iso2 === state.selected) b.setAttribute('aria-current', 'true');
 
     const share = ((state.direction === 'BAL' ? Math.abs(v) : v) / total) * 100;
+    // In the balance view the bar is signed; elsewhere it just carries magnitude.
+    const sign = state.direction === 'BAL' ? (v < 0 ? ' neg' : ' pos') : '';
     b.innerHTML =
-      `<span class="rank-n">${i + 1}</span>` +
+      `<span class="rank-n num">${i + 1}</span>` +
       `<span class="rank-name">${countryName(iso2)}</span>` +
-      `<span class="rank-right"><span class="rank-val">${money(v)}</span>` +
-      `<span class="rank-share">${share.toFixed(1)}%</span></span>` +
-      `<span class="rank-bar${v < 0 ? ' neg' : ''}" style="width:${Math.max(1, (Math.abs(v) / top) * 100).toFixed(1)}%"></span>`;
+      `<span class="rank-val num">${money(v)}</span>` +
+      `<span class="rank-share num">${share.toFixed(1)}%</span>` +
+      `<span class="rank-bar${sign}" style="width:${Math.max(1, (Math.abs(v) / top) * 100).toFixed(1)}%"></span>`;
 
     b.setAttribute('aria-label',
       `${countryName(iso2)}, ${money(v)}, ${share.toFixed(1)} per cent of the total`);
@@ -270,9 +277,9 @@ function renderLegend(entries) {
     return state.direction === 'BAL' ? divergingColor(t * 2 - 1) : rampColor(t);
   }).join(',');
   el.legend.innerHTML =
-    `<span>${state.direction === 'BAL' ? money(-max) : '0'}</span>` +
+    `<span class="num">${state.direction === 'BAL' ? money(-max) : '0'}</span>` +
     `<span class="legend-scale" style="background:linear-gradient(90deg,${stops})"></span>` +
-    `<span>${money(max)}</span>`;
+    `<span class="num">${money(max)}</span>`;
 }
 
 function sparkline(iso2) {
@@ -295,19 +302,27 @@ function sparkline(iso2) {
   const y = (v) => H - 3 - ((v - min) / span) * (H - 8);
 
   const line = series.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-  const area = `${line} L${W},${H} L0,${H} Z`;
-  const colour = state.direction === 'IM' ? '#60ced6' : state.direction === 'BAL' && series.at(-1) < 0 ? '#e8836f' : '#f2c14e';
+  // Colour follows the direction being shown, from the same tokens as everything else.
+  const ink = getComputedStyle(document.documentElement);
+  const colour = ink.getPropertyValue(
+    state.direction === 'IM' ? '--import-bright'
+      : state.direction === 'BAL' && series.at(-1) < 0 ? '--deficit'
+        : '--export-bright',
+  ).trim();
 
   const zero = min < 0 && max > 0
-    ? `<line x1="0" y1="${y(0).toFixed(1)}" x2="${W}" y2="${y(0).toFixed(1)}" stroke="rgba(255,255,255,0.22)" stroke-width="1" stroke-dasharray="3 3"/>`
+    ? `<line x1="0" y1="${y(0).toFixed(1)}" x2="${W}" y2="${y(0).toFixed(1)}" ` +
+      `stroke="${ink.getPropertyValue('--rule-strong').trim()}" stroke-width="1"/>`
     : '';
 
+  const dirWord = { EX: 'Exports', IM: 'Imports', BAL: 'Balance' }[state.direction];
   return (
+    `<h3 class="caption">${dirWord}, last ${series.length} months<b>to ${shortMonth(window.at(-1))}</b></h3>` +
     `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" ` +
     `aria-label="${window.length}-month trend to ${longMonth(window.at(-1))}">` +
-    `<path d="${area}" fill="${colour}" opacity="0.11"/>${zero}` +
-    `<path d="${line}" fill="none" stroke="${colour}" stroke-width="1.6" stroke-linejoin="round"/>` +
-    `<circle cx="${W}" cy="${y(series.at(-1)).toFixed(1)}" r="2.6" fill="${colour}"/></svg>`
+    `${zero}<path d="${line}" fill="none" stroke="${colour}" stroke-width="1.4" ` +
+    'stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' +
+    `<circle cx="${W - 1.5}" cy="${y(series.at(-1)).toFixed(1)}" r="2" fill="${colour}"/></svg>`
   );
 }
 
@@ -315,8 +330,9 @@ function renderDetail(tIndex) {
   const iso2 = state.selected;
   if (!iso2) {
     el.detail.innerHTML =
-      '<p class="empty">Click a country on the globe, or pick one from the list, to see its trade with the UK ' +
-      'and the indirect-tax regime you would be selling into.</p>';
+      '<h2 class="caption">Market detail</h2>' +
+      '<p class="empty">Select a country — on the globe, or from the list — to see its trade with the ' +
+      'UK and the indirect-tax regime you would be selling into.</p>';
     return;
   }
 
@@ -329,32 +345,29 @@ function renderDetail(tIndex) {
   const taxBlock = market
     ? (() => {
         const regime = REGIMES[market.regime];
-        const pill = market.regime === 'eu-oss'
-          ? '<span class="pill oss">OSS eligible</span>'
-          : `<span class="pill no-oss">${regime.label}</span>`;
         return (
-          `<div class="tax"><p class="eyebrow">Selling into this market</p>${pill}` +
-          '<dl>' +
-          `<dt>Standard rate</dt><dd>${market.vat == null ? '—' : `${market.vat}%`}</dd>` +
-          `<dt>Regime</dt><dd>${regime.label}</dd>` +
+          '<h3 class="caption">Selling into this market</h3>' +
+          `<p class="regime${market.regime === 'eu-oss' ? ' oss' : ''}">${regime.label}</p>` +
+          '<dl class="tax-figures">' +
+          `<dt>Standard rate</dt><dd class="num">${market.vat == null ? '—' : `${market.vat}%`}</dd>` +
           '</dl>' +
           `<p class="note">${regime.blurb}${market.note ? ` ${market.note}` : ''}</p>` +
-          `<p class="note">Indicative, as at ${TAX_AS_AT}. Rates and thresholds change — verify with the ` +
-          'tax authority before relying on this. Not tax advice.</p></div>'
+          `<p class="note caveat">Indicative, as at ${TAX_AS_AT}. Rates and thresholds change — ` +
+          'verify with the tax authority before relying on this. Not tax advice.</p>'
         );
       })()
-    : '<div class="tax"><p class="eyebrow">Selling into this market</p>' +
+    : '<h3 class="caption">Selling into this market</h3>' +
       `<p class="note">No indirect-tax profile recorded for ${countryName(iso2)}. The profile covers ` +
       `${Object.keys(MARKETS).length} markets — ${TAX_COVERAGE}% of UK two-way goods trade in ` +
-      `${longMonth(latest)}.</p></div>`;
+      `${longMonth(latest)}.</p>`;
 
   el.detail.innerHTML =
-    `<div><p class="eyebrow">${longMonth(t)}</p><h2>${countryName(iso2)}</h2></div>` +
-    '<div class="stat-row">' +
-    `<div class="stat"><p>UK exports</p><p style="color:#f2c14e">${money(ex)}</p></div>` +
-    `<div class="stat"><p>UK imports</p><p style="color:#60ced6">${money(im)}</p></div>` +
-    '</div>' +
-    `<div class="stat"><p>Balance</p><p style="color:${bal >= 0 ? '#6fd39a' : '#e8836f'}">${money(bal)}</p></div>` +
+    `<div class="detail-head"><p>${longMonth(t)}</p><h2>${countryName(iso2)}</h2></div>` +
+    '<dl class="figures">' +
+    `<dt>UK exports</dt><dd class="num ex">${money(ex)}</dd>` +
+    `<dt>UK imports</dt><dd class="num im">${money(im)}</dd>` +
+    `<dt>Balance</dt><dd class="num ${bal >= 0 ? 'pos' : 'neg'}">${money(bal)}</dd>` +
+    '</dl>' +
     (commodityIsTimeless() ? '' : sparkline(iso2)) +
     taxBlock;
 }
@@ -446,9 +459,21 @@ function play() {
 el.play.addEventListener('click', () => (state.playing ? stop() : play()));
 
 document.addEventListener('keydown', (e) => {
-  if (e.target.matches('input, select, button')) return;
-  if (e.key === ' ') { e.preventDefault(); state.playing ? stop() : play(); }
-  if (e.key === 'Escape' && state.selected) select(null);
+  // Escape always clears the selection. The old guard bailed whenever the target was a
+  // button, which meant that after clicking any control — a direction tab, a market row —
+  // Escape silently stopped working.
+  if (e.key === 'Escape') {
+    if (state.selected) select(null);
+    return;
+  }
+  // Space toggles playback, except where the browser already owns it: a focused button
+  // must still activate on Space, and a form control must keep its own behaviour.
+  const t = e.target;
+  if (t instanceof HTMLButtonElement || t instanceof HTMLInputElement || t instanceof HTMLSelectElement) return;
+  if (e.key === ' ') {
+    e.preventDefault();
+    if (state.playing) stop(); else play();
+  }
 });
 
 // Fade the interaction hint once the user has clearly got the idea.

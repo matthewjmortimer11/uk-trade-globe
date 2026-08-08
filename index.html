@@ -16,7 +16,10 @@
       <header class="bar">
         <div class="brand">
           <h1>Where Britain Sells</h1>
-          <p id="subtitle">UK trade in goods, by market — Office for National Statistics</p>
+          <p id="subtitle">
+            UK trade in goods by market, monthly since January 2018.
+            Office for National Statistics.
+          </p>
         </div>
 
         <div class="controls">
@@ -36,24 +39,24 @@
       <section class="rail" aria-label="Headline figures and top markets">
         <div class="hero">
           <p class="hero-label" id="hero-label">Total goods exports</p>
-          <p class="hero-value"><span id="hero-value">—</span></p>
+          <p class="hero-value" id="hero-value">—</p>
           <p class="hero-meta">
             <span id="hero-month">—</span>
-            <span class="delta" id="hero-yoy">—</span>
+            <span class="delta" id="hero-yoy"></span>
           </p>
         </div>
 
-        <div class="rank-head">
-          <h2 id="rank-title">Top markets</h2>
-          <span id="rank-count" class="muted"></span>
-        </div>
+        <h2 class="caption">
+          <span id="rank-title">Top markets</span>
+          <b id="rank-count"></b>
+        </h2>
 
         <ol class="ranks" id="ranks" aria-label="Markets ranked by value"></ol>
       </section>
 
       <section class="stage" aria-label="Globe">
         <canvas id="globe" aria-label="Interactive globe of UK trade flows. Use the market list for a text equivalent."></canvas>
-        <div class="stage-hint" id="stage-hint">Drag to spin · scroll to zoom · click a country</div>
+        <div class="stage-hint" id="stage-hint">Drag to rotate · scroll to zoom · click a country</div>
         <div class="legend" id="legend" aria-hidden="true"></div>
       </section>
 

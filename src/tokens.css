@@ -1,0 +1,99 @@
+/* Design tokens.
+ *
+ * The angle: an instrument from a statistics office, not a dashboard from a startup.
+ * Warm ink rather than navy-black, pigment rather than neon, hairline rules rather than
+ * floating cards. Every value in the sheet below is picked from these tokens.
+ */
+
+:root {
+  /* — Neutrals ————————————————————————————————————————————————————————
+   * A warm ink ramp. Hue rotates as it lightens (34° at the dark end toward 38° at the
+   * light end) rather than only changing lightness, which is what stops a dark UI going
+   * muddy grey. Ten steps, because five is never enough to build hierarchy with.
+   */
+  --ink-950: #100e0c;
+  --ink-900: #14120f;
+  --ink-850: #1a1713;
+  --ink-800: #211d18;
+  --ink-750: #2a251f;
+  --ink-700: #342d26;
+  --ink-600: #463d33;
+  --ink-500: #6b6156;
+  --ink-400: #93897c;
+  --ink-300: #b7ada0;
+  --ink-200: #d7cfc4;
+  --ink-100: #ece6dc;
+  --ink-050: #f6f2ea;
+
+  /* — Semantic surfaces & text ——————————————————————————————————————— */
+  --surface: var(--ink-900);
+  --surface-raised: var(--ink-850);
+  --rule: var(--ink-750);
+  --rule-strong: var(--ink-600);
+  --text: var(--ink-100);
+  --text-secondary: var(--ink-300);
+  --text-muted: var(--ink-400);
+  --text-faint: var(--ink-500);
+
+  /* — Pigments ————————————————————————————————————————————————————————
+   * Two accents carrying direction, and a diverging pair for balance. Desaturated
+   * against the neon defaults: these read as printing inks, not LEDs. Each has a
+   * dim step for marks and a bright step for text, because the contrast a 2px arc
+   * needs and the contrast a 13px number needs are not the same.
+   */
+  --export: #c8963c;
+  --export-bright: #dcae52;
+  --export-dim: #8d6626;
+
+  --import: #5f90ab;
+  --import-bright: #82aac2;
+  --import-dim: #3f6479;
+
+  --surplus: #6f9a6f;
+  --deficit: #b3654d;
+
+  /* — Sequential ramp (magnitude) ————————————————————————————————————
+   * One hue, dark to light — the choropleth scale. The previous ramp ran slate → teal →
+   * gold, which is a rainbow: on a magnitude scale hue changes carry no meaning, and the
+   * eye reads the hue jumps as category boundaries that aren't there.
+   *
+   * Globe.js reads these six steps at startup rather than keeping its own copy, so the
+   * legend gradient and the landmasses can't drift apart.
+   */
+  --seq-0: #1c1814;
+  --seq-1: #2b2216;
+  --seq-2: #44331a;
+  --seq-3: #674b1f;
+  --seq-4: #926c29;
+  --seq-5: #bf933b;
+  --seq-6: #e8c378;
+
+  /* Land with no recorded trade — a step above the ocean, below the ramp's floor. */
+  --land-empty: #1a1613;
+  --ocean: #131b20;
+
+  /* — Type ——————————————————————————————————————————————————————————— */
+  --serif: 'IBM Plex Serif', Georgia, 'Times New Roman', serif;
+  --sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Modular scale, ~1.22 ratio at the small end opening to ~1.35 for display. */
+  --t-10: 10px;
+  --t-11: 11px;
+  --t-12: 12px;
+  --t-13: 13px;
+  --t-15: 15px;
+  --t-18: 18px;
+  --t-22: 22px;
+  --t-28: 28px;
+  --t-40: 40px;
+
+  /* — Space ——————————————————————————————————————————————————————————— */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+}

@@ -76,11 +76,39 @@ Country join
 No framework. `d3-geo` for the projection, `topojson-client` for the atlas, Vite to bundle.
 440 KB of JavaScript, 153 KB gzipped, most of which is the data itself.
 
+### Design
+
+The brief was an instrument from a statistics office, not a dashboard from a startup. In
+practice that meant deleting things: the neon-on-navy palette, the bloom on the arcs, the
+star field, the floating rounded cards, the wide-tracked uppercase labels on every heading,
+and the pulse on the selected country.
+
+What replaced them:
+
+- **Warm ink, not navy-black.** A ten-step neutral ramp whose hue rotates as it lightens,
+  so a dark UI doesn't go muddy grey. Two pigments — ochre for exports, slate blue for
+  imports — desaturated until they read as printing inks rather than LEDs.
+- **IBM Plex**, all three cuts. Serif for the headline and the hero figure, Sans for the
+  interface, Mono for every number. Self-hosted, so there's no third-party request and it
+  works offline. The hero figure gets its authority from typeface and size, not from being
+  painted an accent colour.
+- **Rules and whitespace instead of cards.** There is exactly one bordered surface on the
+  screen — the globe well — and it earns it by containing something that isn't text. Every
+  section is introduced by a hairline with a small label sitting on it; that repeated motif
+  is the layout's signature.
+- **Tabular lining figures everywhere**, so columns align and digits don't jitter as the
+  scrubber runs.
+- **A surveyor's crosshair** marks the UK rather than a pulsing dot. It's a fixed reference
+  point and should look like one.
+
 ### Two decisions worth explaining
 
-**Choropleth uses a square-root scale.** Trade value is violently long-tailed — the US alone
-is 15.6% of exports. On a linear scale every market outside the top five is indistinguishable
-from zero, which is exactly the information a market-entry conversation needs.
+**Choropleth uses a square-root scale on a single-hue ramp.** Trade value is violently
+long-tailed — the US alone is 15.6% of exports. On a linear scale every market outside the
+top five is indistinguishable from zero, which is exactly the information a market-entry
+conversation needs. The ramp is one hue, dark to light: an earlier version ran slate → teal
+→ gold, which is a rainbow, and on a magnitude scale hue changes carry no meaning while the
+eye reads the jumps as category boundaries that aren't there.
 
 **Playback advances on elapsed time, not one month per tick.** Timers and `requestAnimationFrame`
 both get clamped when a tab isn't being painted — rAF stops dead, `setInterval` drops to about
